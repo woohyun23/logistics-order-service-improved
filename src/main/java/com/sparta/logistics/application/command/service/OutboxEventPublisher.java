@@ -9,7 +9,6 @@ import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageBuilder;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,13 +25,9 @@ public class OutboxEventPublisher {
     private final OutboxEventRepository outboxEventRepository;
     private final RabbitTemplate rabbitTemplate;
 
-    @Scheduled(fixedDelayString = "${message.outbox.publish-delay-ms:5000}")
-    public void publishPendingEventsBySchedule() {
-        publishPendingEvents();
-    }
-
+    // 트랜잭션 안에서 이벤트를 조회하고 발행 상태를 변경하는 애플리케이션 서비스
     @Transactional
-    protected int publishPendingEvents() {
+    public int publishPendingEvents() {
         List<OutboxEvent> events =
                 outboxEventRepository.findTop50ByStatusOrderByCreatedAtAsc(OutboxStatus.PENDING);
 
