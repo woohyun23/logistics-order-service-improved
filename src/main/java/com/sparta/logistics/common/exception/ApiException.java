@@ -17,10 +17,10 @@ public class ApiException extends RuntimeException {
         this.message = responseCode.getMessage();
     }
 
-    public ApiException(ErrorResponseCode responseCode, String message) {
-        super(responseCode.getMessage());
+    public ApiException(ErrorResponseCode responseCode, Throwable cause) {
+        super(responseCode.getMessage(), cause);
         this.responseCode = responseCode;
         this.status = responseCode.getStatus();
-        this.message = message;
+        this.message = responseCode.getMessage();
     }
 }
