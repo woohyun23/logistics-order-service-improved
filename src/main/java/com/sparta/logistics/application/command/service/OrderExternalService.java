@@ -34,8 +34,13 @@ public class OrderExternalService {
         return productClient.getProduct(productId);
     }
 
-    private GeneralResponse<ProductResponse> fallbackProduct(UUID productId, Throwable throwable) {
-        throw new ApiException(ErrorResponseCode.ORDER_PRODUCT_LOOKUP_FAILED);
+    private GeneralResponse<ProductResponse> fallbackProduct(UUID productId, Throwable cause) {
+        log.error(
+                "외부 API 대체 처리 실행. 대상서비스=상품 서비스, 작업=상품 조회, 상품ID={}",
+                productId,
+                cause
+        );
+        throw new ApiException(ErrorResponseCode.ORDER_PRODUCT_LOOKUP_FAILED, cause);
     }
 
     // Hub
@@ -44,9 +49,17 @@ public class OrderExternalService {
         return hubClient.decreaseStock(request);
     }
 
-    private GeneralResponse<Void> fallbackDecreaseStock(HubStockRequest request, Throwable throwable) {
-        log.error("decreaseStock failed : {}", request, throwable);
-        throw new ApiException(ErrorResponseCode.ORDER_STOCK_DECREASE_FAILED);
+    private GeneralResponse<Void> fallbackDecreaseStock(HubStockRequest request, Throwable cause) {
+        log.error(
+                "외부 API 대체 처리 실행. 대상서비스=허브 서비스, 작업=재고 차감, "
+                        + "주문ID={}, 상품ID={}, 허브ID={}, 수량={}",
+                request.orderId(),
+                request.productId(),
+                request.hubId(),
+                request.quantity(),
+                cause
+        );
+        throw new ApiException(ErrorResponseCode.ORDER_STOCK_DECREASE_FAILED, cause);
     }
 
     @CircuitBreaker(name = "hubService", fallbackMethod = "fallbackIncreaseStock")
@@ -54,8 +67,17 @@ public class OrderExternalService {
         return hubClient.increaseStock(request);
     }
 
-    private GeneralResponse<Void> fallbackIncreaseStock(HubStockRequest request, Throwable throwable) {
-        throw new ApiException(ErrorResponseCode.ORDER_STOCK_RESTORE_FAILED);
+    private GeneralResponse<Void> fallbackIncreaseStock(HubStockRequest request, Throwable cause) {
+        log.error(
+                "외부 API 대체 처리 실행. 대상서비스=허브 서비스, 작업=재고 복원, "
+                        + "주문ID={}, 상품ID={}, 허브ID={}, 수량={}",
+                request.orderId(),
+                request.productId(),
+                request.hubId(),
+                request.quantity(),
+                cause
+        );
+        throw new ApiException(ErrorResponseCode.ORDER_STOCK_RESTORE_FAILED, cause);
     }
 
     // Delivery
@@ -66,9 +88,17 @@ public class OrderExternalService {
 
     private GeneralResponse<DeliveryResponse> fallbackCreateDelivery(
             CreateDeliveryRequest request,
-            Throwable throwable
+            Throwable cause
     ) {
-        throw new ApiException(ErrorResponseCode.ORDER_DELIVERY_CREATE_FAILED);
+        log.error(
+                "외부 API 대체 처리 실행. 대상서비스=배송 서비스, 작업=배송 생성, "
+                        + "주문ID={}, 출발허브ID={}, 도착허브ID={}",
+                request.orderId(),
+                request.departureHubId(),
+                request.destinationHubId(),
+                cause
+        );
+        throw new ApiException(ErrorResponseCode.ORDER_DELIVERY_CREATE_FAILED, cause);
     }
 
     @CircuitBreaker(name = "deliveryService", fallbackMethod = "fallbackCancelDelivery")
@@ -79,9 +109,16 @@ public class OrderExternalService {
     private GeneralResponse<Void> fallbackCancelDelivery(
             UUID deliveryId,
             CancelDeliveryRequest request,
-            Throwable throwable
+            Throwable cause
     ) {
-        throw new ApiException(ErrorResponseCode.ORDER_DELIVERY_CANCEL_FAILED);
+        log.error(
+                "외부 API 대체 처리 실행. 대상서비스=배송 서비스, 작업=배송 취소, "
+                        + "주문ID={}, 배송ID={}",
+                request.orderId(),
+                deliveryId,
+                cause
+        );
+        throw new ApiException(ErrorResponseCode.ORDER_DELIVERY_CANCEL_FAILED, cause);
     }
 
     @CircuitBreaker(name = "deliveryService", fallbackMethod = "fallbackGetDeliveryStatus")
@@ -91,9 +128,14 @@ public class OrderExternalService {
 
     private GeneralResponse<DeliveryStatusResponse> fallbackGetDeliveryStatus(
             UUID deliveryId,
-            Throwable throwable
+            Throwable cause
     ) {
-        throw new ApiException(ErrorResponseCode.ORDER_DELIVERY_STATUS_LOOKUP_FAILED);
+        log.error(
+                "외부 API 대체 처리 실행. 대상서비스=배송 서비스, 작업=배송 상태 조회, 배송ID={}",
+                deliveryId,
+                cause
+        );
+        throw new ApiException(ErrorResponseCode.ORDER_DELIVERY_STATUS_LOOKUP_FAILED, cause);
     }
 
 }
