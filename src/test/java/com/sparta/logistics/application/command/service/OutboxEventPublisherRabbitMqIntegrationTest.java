@@ -93,7 +93,7 @@ class OutboxEventPublisherRabbitMqIntegrationTest {
                 payload
         );
 
-        when(outboxEventRepository.findTop50ByStatusOrderByCreatedAtAsc(OutboxStatus.PENDING))
+        when(outboxEventRepository.findPendingEventsForPublish())
                 .thenReturn(List.of(event));
 
         int publishedCount = outboxEventPublisher.publishPendingEvents();
