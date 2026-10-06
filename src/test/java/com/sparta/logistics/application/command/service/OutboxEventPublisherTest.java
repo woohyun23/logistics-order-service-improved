@@ -42,7 +42,7 @@ class OutboxEventPublisherTest {
     void publishPendingEvents_success_marksPublished() {
         OutboxEvent event = createOutboxEvent();
 
-        when(outboxEventRepository.findTop50ByStatusOrderByCreatedAtAsc(OutboxStatus.PENDING))
+        when(outboxEventRepository.findPendingEventsForPublish())
                 .thenReturn(List.of(event));
 
         int publishedCount = outboxEventPublisher.publishPendingEvents();
@@ -73,7 +73,7 @@ class OutboxEventPublisherTest {
     void publishPendingEvents_failure_incrementsRetryCount() {
         OutboxEvent event = createOutboxEvent();
 
-        when(outboxEventRepository.findTop50ByStatusOrderByCreatedAtAsc(OutboxStatus.PENDING))
+        when(outboxEventRepository.findPendingEventsForPublish())
                 .thenReturn(List.of(event));
         doThrow(new RuntimeException("rabbit publish failed"))
                 .when(rabbitTemplate)
@@ -93,7 +93,7 @@ class OutboxEventPublisherTest {
     void publishPendingEvents_failureOverMaxRetry_marksFailed() {
         OutboxEvent event = createOutboxEvent();
 
-        when(outboxEventRepository.findTop50ByStatusOrderByCreatedAtAsc(OutboxStatus.PENDING))
+        when(outboxEventRepository.findPendingEventsForPublish())
                 .thenReturn(List.of(event));
         doThrow(new RuntimeException("rabbit publish failed"))
                 .when(rabbitTemplate)
@@ -119,7 +119,7 @@ class OutboxEventPublisherTest {
         String payload = "{\"header\":{\"messageId\":\"" + eventId + "\"}}";
         OutboxEvent event = createOutboxEvent(payload);
 
-        when(outboxEventRepository.findTop50ByStatusOrderByCreatedAtAsc(OutboxStatus.PENDING))
+        when(outboxEventRepository.findPendingEventsForPublish())
                 .thenReturn(List.of(event));
         doThrow(new RuntimeException("rabbit publish failed"))
                 .doNothing()

@@ -31,10 +31,18 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -66,6 +74,9 @@ class OutboxEventSchedulerTransactionIntegrationTest {
 
     @Autowired
     private OutboxEventScheduler outboxEventScheduler;
+
+    @Autowired
+    private OutboxEventPublisher outboxEventPublisher;
 
     @Autowired
     private OutboxEventRepository outboxEventRepository;
@@ -110,6 +121,87 @@ class OutboxEventSchedulerTransactionIntegrationTest {
         assertThat(failedEvent.getRetryCount()).isEqualTo(1);
         assertThat(failedEvent.getErrorMessage()).isEqualTo("rabbit publish failed");
         assertThat(failedEvent.getPublishedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("두 Publisher가 동시에 실행되어도 같은 이벤트는 한 번만 선점한다")
+    void publishPendingEvents_concurrently_claimsSameEventOnlyOnce() throws Exception {
+        outboxEventRepository.save(createOutboxEvent());
+        CountDownLatch firstPublishStarted = new CountDownLatch(1);
+        CountDownLatch releaseFirstPublish = new CountDownLatch(1);
+        AtomicBoolean firstInvocation = new AtomicBoolean(true);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        doAnswer(invocation -> {
+            if (firstInvocation.compareAndSet(true, false)) {
+                firstPublishStarted.countDown();
+                if (!releaseFirstPublish.await(5, TimeUnit.SECONDS)) {
+                    throw new IllegalStateException("첫 번째 Publisher 대기 시간이 초과되었습니다.");
+                }
+            }
+            return null;
+        }).when(rabbitTemplate).send(anyString(), anyString(), any(Message.class));
+
+        Future<Integer> first = executor.submit(outboxEventPublisher::publishPendingEvents);
+
+        try {
+            assertThat(firstPublishStarted.await(5, TimeUnit.SECONDS)).isTrue();
+
+            Future<Integer> second = executor.submit(outboxEventPublisher::publishPendingEvents);
+            assertThat(second.get(5, TimeUnit.SECONDS)).isZero();
+        } finally {
+            releaseFirstPublish.countDown();
+            executor.shutdown();
+        }
+
+        assertThat(first.get(5, TimeUnit.SECONDS)).isEqualTo(1);
+        assertThat(executor.awaitTermination(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(outboxEventRepository.findAll())
+                .allSatisfy(event -> assertThat(event.getStatus()).isEqualTo(OutboxStatus.PUBLISHED));
+        verify(rabbitTemplate, times(1)).send(anyString(), anyString(), any(Message.class));
+    }
+
+    @Test
+    @DisplayName("두 Publisher는 잠긴 이벤트를 건너뛰고 서로 다른 배치를 병렬로 처리한다")
+    void publishPendingEvents_concurrently_processesDifferentBatches() throws Exception {
+        outboxEventRepository.saveAll(
+                IntStream.range(0, 51)
+                        .mapToObj(index -> createOutboxEvent())
+                        .toList()
+        );
+        CountDownLatch firstPublishStarted = new CountDownLatch(1);
+        CountDownLatch releaseFirstPublish = new CountDownLatch(1);
+        AtomicBoolean firstInvocation = new AtomicBoolean(true);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        doAnswer(invocation -> {
+            if (firstInvocation.compareAndSet(true, false)) {
+                firstPublishStarted.countDown();
+                if (!releaseFirstPublish.await(5, TimeUnit.SECONDS)) {
+                    throw new IllegalStateException("첫 번째 Publisher 대기 시간이 초과되었습니다.");
+                }
+            }
+            return null;
+        }).when(rabbitTemplate).send(anyString(), anyString(), any(Message.class));
+
+        Future<Integer> first = executor.submit(outboxEventPublisher::publishPendingEvents);
+
+        try {
+            assertThat(firstPublishStarted.await(5, TimeUnit.SECONDS)).isTrue();
+
+            Future<Integer> second = executor.submit(outboxEventPublisher::publishPendingEvents);
+            assertThat(second.get(5, TimeUnit.SECONDS)).isEqualTo(1);
+        } finally {
+            releaseFirstPublish.countDown();
+            executor.shutdown();
+        }
+
+        assertThat(first.get(5, TimeUnit.SECONDS)).isEqualTo(50);
+        assertThat(executor.awaitTermination(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(outboxEventRepository.findAll())
+                .hasSize(51)
+                .allSatisfy(event -> assertThat(event.getStatus()).isEqualTo(OutboxStatus.PUBLISHED));
+        verify(rabbitTemplate, times(51)).send(anyString(), anyString(), any(Message.class));
     }
 
     private OutboxEvent createOutboxEvent() {

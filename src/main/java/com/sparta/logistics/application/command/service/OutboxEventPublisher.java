@@ -1,7 +1,6 @@
 package com.sparta.logistics.application.command.service;
 
 import com.sparta.logistics.domain.entity.OutboxEvent;
-import com.sparta.logistics.domain.model.OutboxStatus;
 import com.sparta.logistics.domain.repository.OutboxEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,8 +27,12 @@ public class OutboxEventPublisher {
     // 트랜잭션 안에서 이벤트를 조회하고 발행 상태를 변경하는 애플리케이션 서비스
     @Transactional
     public int publishPendingEvents() {
-        List<OutboxEvent> events =
-                outboxEventRepository.findTop50ByStatusOrderByCreatedAtAsc(OutboxStatus.PENDING);
+        List<OutboxEvent> events = outboxEventRepository.findPendingEventsForPublish();
+
+        if (!events.isEmpty()) {
+            log.info("Outbox 이벤트를 선점했습니다. count={}, eventIds={}",
+                    events.size(), events.stream().map(OutboxEvent::getId).toList());
+        }
 
         events.forEach(this::publish);
         return events.size();
@@ -45,7 +48,8 @@ public class OutboxEventPublisher {
             rabbitTemplate.send(event.getExchange(), event.getRoutingKey(), message);
             event.markPublished();
         } catch (Exception e) {
-            log.error("Outbox event publish failed. event={}", event, e);
+            log.error("Outbox 이벤트 발행에 실패했습니다. eventId={}, eventType={}, aggregateId={}",
+                    event.getId(), event.getEventType(), event.getAggregateId(), e);
 
             event.markPublishFailed(e.getMessage(), MAX_RETRY_COUNT);
         }
