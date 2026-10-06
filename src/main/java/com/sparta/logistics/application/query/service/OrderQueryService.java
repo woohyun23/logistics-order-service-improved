@@ -2,6 +2,7 @@ package com.sparta.logistics.application.query.service;
 
 import com.sparta.logistics.application.query.dto.InternalOrderResponse;
 import com.sparta.logistics.application.query.dto.OrderDetailResponse;
+import com.sparta.logistics.application.query.dto.OrderExternalInfoResponse;
 import com.sparta.logistics.application.query.dto.OrderSearchCondition;
 import com.sparta.logistics.application.query.dto.OrderSearchResponse;
 import com.sparta.logistics.application.query.dto.OrderStatsResponse;
@@ -18,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -35,6 +37,7 @@ import java.util.stream.Collectors;
 public class OrderQueryService implements OrderQueryUseCase {
 
     private final OrderRepository orderRepository;
+    private final OrderExternalQueryService orderExternalQueryService;
 
     @Override
     public OrderDetailResponse getOrderDetail(UUID orderId) {
@@ -42,6 +45,20 @@ public class OrderQueryService implements OrderQueryUseCase {
                 .orElseThrow(() -> new ApiException(ErrorResponseCode.ORDER_NOT_FOUND));
 
         return OrderDetailResponse.from(order);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public OrderExternalInfoResponse getOrderExternalInfo(UUID orderId) {
+        Order order = orderRepository.findByIdAndDeletedAtIsNull(orderId)
+                .orElseThrow(() -> new ApiException(ErrorResponseCode.ORDER_NOT_FOUND));
+
+        var product = orderExternalQueryService.getProduct(order.getProductId());
+        var deliveryStatus = order.getDeliveryId() == null
+                ? null
+                : orderExternalQueryService.getDeliveryStatus(order.getDeliveryId());
+
+        return new OrderExternalInfoResponse(order.getId(), product, deliveryStatus);
     }
 
     @Override
