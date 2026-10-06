@@ -2,6 +2,7 @@ package com.sparta.logistics;
 
 import com.sparta.logistics.domain.repository.OrderRepository;
 import com.sparta.logistics.domain.repository.OutboxEventRepository;
+import com.sparta.logistics.domain.repository.ProcessedEventRepository;
 import com.sparta.logistics.infrastructure.feign.client.DeliveryClient;
 import com.sparta.logistics.infrastructure.feign.client.HubClient;
 import com.sparta.logistics.infrastructure.feign.client.ProductClient;
@@ -32,6 +33,9 @@ class OrderServiceApplicationTests {
 
     @MockitoBean
     private OutboxEventRepository outboxEventRepository;
+
+    @MockitoBean
+    private ProcessedEventRepository processedEventRepository;
 
     @MockitoBean
     private ProductClient productClient;
