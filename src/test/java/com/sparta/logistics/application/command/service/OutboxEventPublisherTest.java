@@ -19,6 +19,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -111,14 +112,44 @@ class OutboxEventPublisherTest {
         assertThat(event.getPublishedAt()).isNull();
     }
 
+    @Test
+    @DisplayName("Outbox 이벤트 재발행 시 최초 payload의 이벤트 ID를 그대로 사용한다")
+    void publishPendingEvents_retry_preservesEventId() {
+        String eventId = UUID.randomUUID().toString();
+        String payload = "{\"header\":{\"messageId\":\"" + eventId + "\"}}";
+        OutboxEvent event = createOutboxEvent(payload);
+
+        when(outboxEventRepository.findTop50ByStatusOrderByCreatedAtAsc(OutboxStatus.PENDING))
+                .thenReturn(List.of(event));
+        doThrow(new RuntimeException("rabbit publish failed"))
+                .doNothing()
+                .when(rabbitTemplate)
+                .send(eq("baekma.exchange"), eq("order.created"), org.mockito.ArgumentMatchers.any(Message.class));
+
+        outboxEventPublisher.publishPendingEvents();
+        outboxEventPublisher.publishPendingEvents();
+
+        ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(rabbitTemplate, times(2))
+                .send(eq("baekma.exchange"), eq("order.created"), messageCaptor.capture());
+
+        assertThat(messageCaptor.getAllValues())
+                .extracting(message -> new String(message.getBody(), StandardCharsets.UTF_8))
+                .containsExactly(payload, payload);
+    }
+
     private OutboxEvent createOutboxEvent() {
+        return createOutboxEvent("{\"test\":\"payload\"}");
+    }
+
+    private OutboxEvent createOutboxEvent(String payload) {
         return OutboxEvent.create(
                 "ORDER",
                 UUID.randomUUID(),
                 "OrderCreatedEvent",
                 "baekma.exchange",
                 "order.created",
-                "{\"test\":\"payload\"}"
+                payload
         );
     }
 }
