@@ -1,6 +1,7 @@
 package com.sparta.logistics.presentation.query.controller;
 
 import com.sparta.logistics.application.query.dto.OrderDetailResponse;
+import com.sparta.logistics.application.query.dto.OrderExternalInfoResponse;
 import com.sparta.logistics.application.query.dto.OrderSearchCondition;
 import com.sparta.logistics.application.query.dto.OrderSearchResponse;
 import com.sparta.logistics.application.query.dto.OrderStatsResponse;
@@ -36,6 +37,19 @@ public class OrderQueryController {
             @PathVariable UUID orderId
     ) {
         OrderDetailResponse response = orderQueryUseCase.getOrderDetail(orderId);
+
+        return GeneralResponse.toResponseEntity(GeneralResponseCode.OK, response);
+    }
+
+    @Operation(
+            summary = "주문 외부 정보 조회",
+            description = "상품 정보와 배송 상태를 조회하며 외부 서비스 장애 시 최근 캐시 데이터를 반환합니다."
+    )
+    @GetMapping("/{orderId}/external-info")
+    public ResponseEntity<GeneralResponse<OrderExternalInfoResponse>> getOrderExternalInfo(
+            @PathVariable UUID orderId
+    ) {
+        OrderExternalInfoResponse response = orderQueryUseCase.getOrderExternalInfo(orderId);
 
         return GeneralResponse.toResponseEntity(GeneralResponseCode.OK, response);
     }

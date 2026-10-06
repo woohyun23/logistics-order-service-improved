@@ -61,6 +61,9 @@ message:
       hub-deleted: hub.deleted
   outbox:
     publish-delay-ms: 5000
+  external-query-cache:
+    product-ttl-seconds: 300
+    delivery-status-ttl-seconds: 30
 
 management:
   tracing:
