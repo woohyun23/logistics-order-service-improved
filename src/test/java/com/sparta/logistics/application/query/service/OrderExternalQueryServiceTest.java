@@ -4,6 +4,7 @@ import com.sparta.logistics.application.query.dto.ExternalDataSource;
 import com.sparta.logistics.application.query.dto.ExternalLookupResponse;
 import com.sparta.logistics.common.code.ErrorResponseCode;
 import com.sparta.logistics.common.exception.ApiException;
+import com.sparta.logistics.common.metrics.OrderPerformanceMetrics;
 import com.sparta.logistics.infrastructure.cache.CachedExternalValue;
 import com.sparta.logistics.infrastructure.cache.ExternalQueryCache;
 import com.sparta.logistics.infrastructure.feign.client.DeliveryClient;
@@ -44,6 +45,9 @@ class OrderExternalQueryServiceTest {
 
     @Mock
     private ExternalQueryCache externalQueryCache;
+
+    @Mock
+    private OrderPerformanceMetrics performanceMetrics;
 
     @InjectMocks
     private OrderExternalQueryService orderExternalQueryService;

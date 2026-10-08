@@ -5,10 +5,10 @@ COPY gradlew .
 COPY gradle gradle
 COPY build.gradle settings.gradle ./
 
-RUN ./gradlew --no-daemon dependencies
+RUN bash gradlew --no-daemon dependencies
 
 COPY . .
-RUN ./gradlew --no-daemon bootJar -x test
+RUN bash gradlew --no-daemon bootJar -x test
 
 FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app

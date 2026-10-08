@@ -1,0 +1,148 @@
+name: logistics-order-performance
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: logistics_order
+      POSTGRES_USER: order
+      POSTGRES_PASSWORD: order
+    ports:
+      - "15432:5432"
+    volumes:
+      - performance-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U order -d logistics_order"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    cpus: "1.0"
+    mem_limit: 512m
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: order
+      RABBITMQ_DEFAULT_PASS: order
+    ports:
+      - "15672:5672"
+      - "15673:15672"
+    volumes:
+      - performance-rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    cpus: "1.0"
+    mem_limit: 512m
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "no", "--save", ""]
+    ports:
+      - "16379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    cpus: "0.5"
+    mem_limit: 256m
+
+  external-services:
+    image: wiremock/wiremock:3.9.1
+    command: ["--global-response-templating", "--verbose"]
+    ports:
+      - "18080:8080"
+    volumes:
+      - ./wiremock:/home/wiremock:ro
+    cpus: "0.5"
+    mem_limit: 256m
+
+  order-service:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: performance
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: logistics_order
+      DB_USER: order
+      DB_PASSWORD: order
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: order
+      RABBITMQ_PASSWORD: order
+      PRODUCT_SERVICE_URL: http://external-services:8080
+      DELIVERY_SERVICE_URL: http://external-services:8080
+      HUB_SERVICE_URL: http://external-services:8080
+      DB_MAX_POOL_SIZE: 20
+      DB_MIN_IDLE: 5
+      RABBITMQ_CONSUMER_CONCURRENCY: 4
+      RABBITMQ_CONSUMER_MAX_CONCURRENCY: 16
+      OUTBOX_PUBLISH_DELAY_MS: 5000
+    ports:
+      - "19090:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      external-services:
+        condition: service_started
+    cpus: "1.0"
+    mem_limit: 768m
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=7d
+    ports:
+      - "19091:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - performance-prometheus-data:/prometheus
+    depends_on:
+      - order-service
+    cpus: "0.5"
+    mem_limit: 512m
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "13000:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - performance-grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    cpus: "0.5"
+    mem_limit: 512m
+
+  k6:
+    image: grafana/k6:0.54.0
+    profiles: ["tools"]
+    environment:
+      BASE_URL: http://order-service:8080
+    volumes:
+      - ./k6:/scripts:ro
+      - ./results:/results
+    depends_on:
+      - order-service
+
+volumes:
+  performance-postgres-data:
+  performance-rabbitmq-data:
+  performance-prometheus-data:
+  performance-grafana-data:

@@ -1,0 +1,14 @@
+{
+  "header": {
+    "messageId": "{{messageId}}",
+    "actorId": null,
+    "eventType": "DeliveryCreatedEvent",
+    "timestamp": "{{timestamp}}",
+    "version": "v1"
+  },
+  "payload": {
+    "orderId": "{{orderId}}",
+    "deliveryId": "{{deliveryId}}",
+    "createdAt": "{{timestamp}}"
+  }
+}

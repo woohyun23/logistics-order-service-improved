@@ -1,6 +1,7 @@
 package com.sparta.logistics.application.command.service;
 
 import com.sparta.logistics.domain.entity.OutboxEvent;
+import com.sparta.logistics.common.metrics.OrderPerformanceMetrics;
 import com.sparta.logistics.domain.model.OutboxStatus;
 import com.sparta.logistics.domain.repository.OutboxEventRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -33,6 +34,9 @@ class OutboxEventPublisherTest {
 
     @Mock
     private RabbitTemplate rabbitTemplate;
+
+    @Mock
+    private OrderPerformanceMetrics performanceMetrics;
 
     @InjectMocks
     private OutboxEventPublisher outboxEventPublisher;

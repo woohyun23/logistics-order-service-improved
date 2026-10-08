@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.sparta.logistics.application.command.service.OrderSagaService;
 import com.sparta.logistics.common.exception.ApiException;
+import com.sparta.logistics.common.metrics.OrderPerformanceMetrics;
 import com.sparta.logistics.domain.entity.Order;
 import com.sparta.logistics.domain.repository.OrderRepository;
 import com.sparta.logistics.domain.repository.ProcessedEventRepository;
@@ -91,6 +92,9 @@ class OrderSagaEventIdempotencyIntegrationTest {
 
     @MockitoSpyBean
     private OrderSagaService orderSagaService;
+
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private OrderPerformanceMetrics performanceMetrics;
 
     @BeforeEach
     void setUp() {

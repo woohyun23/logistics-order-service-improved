@@ -217,6 +217,13 @@ gradle-app.setting
 # Cache of project
 .gradletasknamecache
 
+# Performance test raw results (keep .gitkeep and summarized reports)
+performance/results/**
+!performance/results/.gitkeep
+!performance/results/README.md
+!performance/results/**/
+!performance/results/**/README.md
+
 # Eclipse Gradle plugin generated files
 # Eclipse Core
 .project
