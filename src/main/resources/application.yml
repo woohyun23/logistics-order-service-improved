@@ -62,6 +62,7 @@ message:
   outbox:
     publish-delay-ms: 5000
   external-query-cache:
+    fallback-enabled: true
     product-ttl-seconds: 300
     delivery-status-ttl-seconds: 30
 

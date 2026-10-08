@@ -4,14 +4,14 @@
     "urlPathPattern": "/internal/api/v1/deliveries/[0-9a-fA-F-]+/status"
   },
   "scenarioName": "delivery-service",
-  "requiredScenarioState": "Started",
+  "requiredScenarioState": "RECOVERED",
   "priority": 1,
   "response": {
     "status": 200,
     "headers": {
       "Content-Type": "application/json"
     },
-    "body": "{\"message\":\"요청이 성공했습니다.\",\"data\":{\"deliveryId\":\"{{request.pathSegments.[4]}}\",\"status\":\"DELIVERING\"}}",
+    "body": "{\"message\":\"요청이 성공했습니다.\",\"data\":{\"deliveryId\":\"{{request.pathSegments.[4]}}\",\"status\":\"DELIVERED\"}}",
     "transformers": ["response-template"]
   }
 }

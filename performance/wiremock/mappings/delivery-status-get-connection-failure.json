@@ -1,0 +1,12 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/internal/api/v1/deliveries/[0-9a-fA-F-]+/status"
+  },
+  "scenarioName": "delivery-service",
+  "requiredScenarioState": "CONNECTION_FAILURE",
+  "priority": 1,
+  "response": {
+    "fault": "CONNECTION_RESET_BY_PEER"
+  }
+}

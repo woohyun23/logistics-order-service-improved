@@ -3,6 +3,9 @@
     "method": "GET",
     "urlPathPattern": "/internal/api/v1/products/[0-9a-fA-F-]+"
   },
+  "scenarioName": "product-service",
+  "requiredScenarioState": "Started",
+  "priority": 1,
   "response": {
     "status": 200,
     "headers": {

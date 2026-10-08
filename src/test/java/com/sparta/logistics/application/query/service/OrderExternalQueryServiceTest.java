@@ -14,10 +14,10 @@ import com.sparta.logistics.infrastructure.feign.dto.delivery.DeliveryStatusResp
 import com.sparta.logistics.infrastructure.feign.dto.product.ProductResponse;
 import com.sparta.logistics.presentation.common.dto.response.GeneralResponse;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -49,8 +49,18 @@ class OrderExternalQueryServiceTest {
     @Mock
     private OrderPerformanceMetrics performanceMetrics;
 
-    @InjectMocks
     private OrderExternalQueryService orderExternalQueryService;
+
+    @BeforeEach
+    void setUp() {
+        orderExternalQueryService = new OrderExternalQueryService(
+                productClient,
+                deliveryClient,
+                externalQueryCache,
+                performanceMetrics,
+                true
+        );
+    }
 
     @Test
     @DisplayName("상품 정상 조회 결과를 캐시에 저장하고 LIVE 응답을 반환한다")
@@ -98,6 +108,29 @@ class OrderExternalQueryServiceTest {
 
         assertThat(exception.getResponseCode()).isEqualTo(ErrorResponseCode.ORDER_PRODUCT_LOOKUP_FAILED);
         assertThat(exception.getCause()).isSameAs(cause);
+    }
+
+    @Test
+    @DisplayName("fallback 비활성화 시 상품 캐시를 조회하지 않고 기존 예외를 반환한다")
+    void fallbackProduct_disabled_throwsWithoutCacheLookup() {
+        orderExternalQueryService = new OrderExternalQueryService(
+                productClient,
+                deliveryClient,
+                externalQueryCache,
+                performanceMetrics,
+                false
+        );
+        UUID productId = UUID.randomUUID();
+        RuntimeException cause = new RuntimeException("상품 서비스 연결 실패");
+
+        ApiException exception = catchThrowableOfType(
+                ApiException.class,
+                () -> invokeFallbackProduct(productId, cause)
+        );
+
+        assertThat(exception.getResponseCode()).isEqualTo(ErrorResponseCode.ORDER_PRODUCT_LOOKUP_FAILED);
+        assertThat(exception.getCause()).isSameAs(cause);
+        verify(externalQueryCache, times(0)).getProduct(productId);
     }
 
     @Test
@@ -151,6 +184,30 @@ class OrderExternalQueryServiceTest {
         assertThat(exception.getResponseCode())
                 .isEqualTo(ErrorResponseCode.ORDER_DELIVERY_STATUS_LOOKUP_FAILED);
         assertThat(exception.getCause()).isSameAs(cause);
+    }
+
+    @Test
+    @DisplayName("fallback 비활성화 시 배송 캐시를 조회하지 않고 기존 예외를 반환한다")
+    void fallbackDeliveryStatus_disabled_throwsWithoutCacheLookup() {
+        orderExternalQueryService = new OrderExternalQueryService(
+                productClient,
+                deliveryClient,
+                externalQueryCache,
+                performanceMetrics,
+                false
+        );
+        UUID deliveryId = UUID.randomUUID();
+        RuntimeException cause = new RuntimeException("배송 서비스 연결 실패");
+
+        ApiException exception = catchThrowableOfType(
+                ApiException.class,
+                () -> invokeFallbackDeliveryStatus(deliveryId, cause)
+        );
+
+        assertThat(exception.getResponseCode())
+                .isEqualTo(ErrorResponseCode.ORDER_DELIVERY_STATUS_LOOKUP_FAILED);
+        assertThat(exception.getCause()).isSameAs(cause);
+        verify(externalQueryCache, times(0)).getDeliveryStatus(deliveryId);
     }
 
     @Test

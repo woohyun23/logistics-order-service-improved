@@ -1,0 +1,19 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/internal/api/v1/products/[0-9a-fA-F-]+"
+  },
+  "scenarioName": "product-service",
+  "requiredScenarioState": "TIMEOUT",
+  "priority": 1,
+  "response": {
+    "status": 200,
+    "fixedDelayMilliseconds": 4000,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "message": "지연된 상품 서비스 응답"
+    }
+  }
+}

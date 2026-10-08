@@ -1,0 +1,18 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/internal/api/v1/products/[0-9a-fA-F-]+"
+  },
+  "scenarioName": "product-service",
+  "requiredScenarioState": "SERVER_ERROR",
+  "priority": 1,
+  "response": {
+    "status": 500,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "message": "상품 서비스 장애"
+    }
+  }
+}
