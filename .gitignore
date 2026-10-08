@@ -224,6 +224,10 @@ performance/results/**
 !performance/results/**/
 !performance/results/**/README.md
 
+# Python helper script cache
+__pycache__/
+*.py[cod]
+
 # Eclipse Gradle plugin generated files
 # Eclipse Core
 .project

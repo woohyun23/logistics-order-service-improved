@@ -73,6 +73,8 @@ management:
 message:
   outbox:
     publish-delay-ms: ${OUTBOX_PUBLISH_DELAY_MS:5000}
+    initial-delay-ms: ${OUTBOX_INITIAL_DELAY_MS:0}
+    skip-locked-enabled: ${OUTBOX_SKIP_LOCKED_ENABLED:true}
   external-query-cache:
     fallback-enabled: ${CACHE_FALLBACK_ENABLED:true}
     product-ttl-seconds: ${PRODUCT_CACHE_TTL_SECONDS:300}
@@ -80,6 +82,7 @@ message:
 
 logging:
   level:
+    com.sparta.logistics.application.command.service.OutboxEventPublisher: warn
     org.hibernate.SQL: off
     org.hibernate.orm.jdbc.bind: off
     org.springframework.amqp.rabbit.listener: warn

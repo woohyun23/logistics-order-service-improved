@@ -82,6 +82,22 @@ bash performance/scripts/run-cache-fallback.sh ttl
 
 상세한 비교 기준, 장애 종류와 결과 해석 방법은 [`results/cache-fallback/README.md`](results/cache-fallback/README.md)를 참고합니다.
 
+## 다중 Outbox Publisher 비교 테스트
+
+과거의 잠금 없는 조회와 현재의 `FOR UPDATE SKIP LOCKED` 조회를 동일한 코드와 환경에서 비교합니다.
+
+```bash
+bash performance/scripts/run-outbox-publisher.sh compare
+```
+
+기본 조건은 10,000개 이벤트, Publisher 1·2·4개, 각 조합 3회 반복입니다. 빠른 실행 검증은 다음 명령을 사용합니다.
+
+```bash
+ALLOW_DIRTY=true bash performance/scripts/run-outbox-publisher.sh validate
+```
+
+RabbitMQ 전용 감사 큐의 전체 메시지 수와 고유 `messageId` 수를 비교해 중복과 유실을 계산합니다. 상세한 조건과 결과 해석 방법은 [`results/outbox-publisher/README.md`](results/outbox-publisher/README.md)를 참고합니다.
+
 ## 테스트 데이터 생성
 
 애플리케이션이 기동해 JPA 테이블이 생성된 뒤 실행합니다.
@@ -91,7 +107,7 @@ docker compose -f performance/docker-compose.yml exec -T postgres \
   psql -U order -d logistics_order < performance/scripts/seed-orders.sql
 
 docker compose -f performance/docker-compose.yml exec -T postgres \
-  psql -U order -d logistics_order < performance/scripts/seed-outbox.sql
+  psql -v event_count=10000 -U order -d logistics_order < performance/scripts/seed-outbox.sql
 ```
 
 기본 데이터 건수는 다음과 같습니다.

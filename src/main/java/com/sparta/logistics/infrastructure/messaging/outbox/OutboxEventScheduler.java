@@ -15,7 +15,10 @@ public class OutboxEventScheduler {
     private final OrderPerformanceMetrics performanceMetrics;
 
     // 정해진 시간에 발행 작업을 시작하는 인프라 진입점
-    @Scheduled(fixedDelayString = "${message.outbox.publish-delay-ms:5000}")
+    @Scheduled(
+            fixedDelayString = "${message.outbox.publish-delay-ms:5000}",
+            initialDelayString = "${message.outbox.initial-delay-ms:0}"
+    )
     public void publishPendingEvents() {
         Timer.Sample sample = performanceMetrics.startTimer();
         try {
