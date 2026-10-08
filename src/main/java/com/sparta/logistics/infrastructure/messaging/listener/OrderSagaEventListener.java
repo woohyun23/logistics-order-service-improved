@@ -20,10 +20,10 @@ public class OrderSagaEventListener {
             SagaEventProcessingResult result = orderSagaEventProcessor.process(message);
             String resultTag = result.name().toLowerCase();
             performanceMetrics.recordConsumerEvent(resultTag);
-            performanceMetrics.stopTimer(sample, "consumer_event", resultTag);
+            performanceMetrics.stopConsumerTimer(sample);
         } catch (Exception e) {
             performanceMetrics.recordConsumerEvent("failed");
-            performanceMetrics.stopTimer(sample, "consumer_event", "failed");
+            performanceMetrics.stopConsumerTimer(sample);
             throw e;
         }
     }
