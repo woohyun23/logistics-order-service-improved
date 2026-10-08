@@ -1,6 +1,7 @@
 package com.sparta.logistics.infrastructure.messaging.outbox;
 
 import com.sparta.logistics.application.command.service.OutboxEventPublisher;
+import com.sparta.logistics.common.metrics.OrderPerformanceMetrics;
 import com.sparta.logistics.domain.entity.OutboxEvent;
 import com.sparta.logistics.domain.model.OutboxStatus;
 import com.sparta.logistics.domain.repository.OutboxEventRepository;
@@ -83,6 +84,9 @@ class OutboxEventSchedulerTransactionIntegrationTest {
 
     @MockitoBean
     private RabbitTemplate rabbitTemplate;
+
+    @MockitoBean
+    private OrderPerformanceMetrics performanceMetrics;
 
     @BeforeEach
     void cleanUpOutboxEvents() {

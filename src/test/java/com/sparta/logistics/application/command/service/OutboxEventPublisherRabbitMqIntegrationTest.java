@@ -1,6 +1,7 @@
 package com.sparta.logistics.application.command.service;
 
 import com.sparta.logistics.domain.entity.OutboxEvent;
+import com.sparta.logistics.common.metrics.OrderPerformanceMetrics;
 import com.sparta.logistics.domain.model.OutboxStatus;
 import com.sparta.logistics.domain.repository.OutboxEventRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -17,6 +18,7 @@ import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -61,7 +63,11 @@ class OutboxEventPublisherRabbitMqIntegrationTest {
         connectionFactory.setPassword(RABBITMQ_PASSWORD);
 
         rabbitTemplate = new RabbitTemplate(connectionFactory);
-        outboxEventPublisher = new OutboxEventPublisher(outboxEventRepository, rabbitTemplate);
+        outboxEventPublisher = new OutboxEventPublisher(
+                outboxEventRepository,
+                rabbitTemplate,
+                new OrderPerformanceMetrics(new SimpleMeterRegistry())
+        );
 
         RabbitAdmin rabbitAdmin = new RabbitAdmin(connectionFactory);
         TopicExchange exchange = new TopicExchange(EXCHANGE_NAME);

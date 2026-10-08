@@ -1,0 +1,12 @@
+{
+  "header": {
+    "messageId": "{{messageId}}",
+    "actorId": null,
+    "eventType": "OrderCreatedEvent",
+    "timestamp": "{{timestamp}}",
+    "version": "v1"
+  },
+  "payload": {
+    "sequence": {{sequence}}
+  }
+}

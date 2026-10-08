@@ -41,7 +41,7 @@ public class OrderSagaEventProcessor {
     private final OrderSagaService orderSagaService;
 
     @Transactional
-    public void process(String message) throws JsonProcessingException {
+    public SagaEventProcessingResult process(String message) throws JsonProcessingException {
         JsonNode root = objectMapper.readTree(message);
         JsonNode header = root.path("header");
         String eventId = requiredText(header, "messageId");
@@ -57,10 +57,11 @@ public class OrderSagaEventProcessor {
         if (claimed == 0) {
             log.info("이미 처리된 Saga 이벤트를 건너뜁니다. eventId={}, eventType={}, consumer={}",
                     eventId, eventType, CONSUMER_NAME);
-            return;
+            return SagaEventProcessingResult.DUPLICATE;
         }
 
         dispatch(eventId, eventType, root.path("payload"));
+        return SagaEventProcessingResult.PROCESSED;
     }
 
     private void dispatch(String eventId, String eventType, JsonNode payload) throws JsonProcessingException {

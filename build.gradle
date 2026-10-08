@@ -29,6 +29,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 
@@ -88,4 +89,25 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+sourceSets {
+    performance {
+        java.srcDir 'performance/message-generator/src/main/java'
+        resources.srcDir 'performance/message-generator/src/main/resources'
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+
+configurations {
+    performanceImplementation.extendsFrom implementation
+    performanceRuntimeOnly.extendsFrom runtimeOnly
+}
+
+tasks.register('runPerformanceMessageGenerator', JavaExec) {
+    group = 'performance'
+    description = 'RabbitMQ에 부하 테스트 메시지를 발행합니다.'
+    classpath = sourceSets.performance.runtimeClasspath
+    mainClass = 'com.sparta.logistics.performance.RabbitMessageGenerator'
 }

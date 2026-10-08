@@ -1,0 +1,14 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/internal/api/v1/products/[0-9a-fA-F-]+"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": "{\"message\":\"요청이 성공했습니다.\",\"data\":{\"id\":\"{{request.pathSegments.[4]}}\",\"name\":\"부하테스트 상품\",\"companyId\":\"00000000-0000-0000-0000-000000000001\",\"companyName\":\"부하테스트 업체\",\"createdAt\":\"2026-01-01T00:00:00Z\",\"updatedAt\":\"2026-01-01T00:00:00Z\"}}",
+    "transformers": ["response-template"]
+  }
+}
