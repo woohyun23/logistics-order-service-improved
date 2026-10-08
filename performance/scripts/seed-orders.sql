@@ -13,15 +13,15 @@ INSERT INTO p_orders (
     due_date
 )
 SELECT
-    gen_random_uuid(),
+    ('10000000-0000-0000-0000-' || lpad(sequence::text, 12, '0'))::uuid,
     now(),
     now(),
-    gen_random_uuid(),
-    gen_random_uuid(),
-    gen_random_uuid(),
-    gen_random_uuid(),
+    ('40000000-0000-0000-0000-' || lpad(sequence::text, 12, '0'))::uuid,
+    ('50000000-0000-0000-0000-' || lpad(sequence::text, 12, '0'))::uuid,
+    ('60000000-0000-0000-0000-' || lpad(sequence::text, 12, '0'))::uuid,
+    ('20000000-0000-0000-0000-' || lpad(sequence::text, 12, '0'))::uuid,
     1 + (sequence % 10),
-    gen_random_uuid(),
+    ('30000000-0000-0000-0000-' || lpad(sequence::text, 12, '0'))::uuid,
     'DELIVERING',
     '부하테스트 주문 ' || sequence,
     now() + interval '7 days'

@@ -60,6 +60,28 @@ BASE_URL=http://localhost:19090 k6 run performance/k6/smoke.js
 
 스모크 테스트는 Actuator Health와 Prometheus Metric 노출 여부만 확인합니다. 실제 부하 시나리오와 성능 목표는 후속 이슈에서 추가합니다.
 
+## 캐시 Fallback 비교 테스트
+
+외부 정보 조회의 캐시 fallback 적용 전후 비교는 다음 명령으로 실행합니다.
+
+```bash
+bash performance/scripts/run-cache-fallback.sh compare
+```
+
+공식 측정은 커밋된 깨끗한 Working Tree에서만 실행됩니다. 스크립트 동작만 빠르게 확인할 때는 다음 명령을 사용합니다.
+
+```bash
+ALLOW_DIRTY=true bash performance/scripts/run-cache-fallback.sh validate
+```
+
+상품 300초, 배송 30초의 실제 TTL 만료 동작은 실행 시간이 길어 별도로 측정합니다.
+
+```bash
+bash performance/scripts/run-cache-fallback.sh ttl
+```
+
+상세한 비교 기준, 장애 종류와 결과 해석 방법은 [`results/cache-fallback/README.md`](results/cache-fallback/README.md)를 참고합니다.
+
 ## 테스트 데이터 생성
 
 애플리케이션이 기동해 JPA 테이블이 생성된 뒤 실행합니다.

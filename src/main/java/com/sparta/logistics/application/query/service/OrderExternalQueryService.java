@@ -12,8 +12,8 @@ import com.sparta.logistics.infrastructure.feign.dto.delivery.DeliveryStatusResp
 import com.sparta.logistics.infrastructure.feign.dto.product.ProductResponse;
 import com.sparta.logistics.presentation.common.dto.response.GeneralResponse;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -21,13 +21,27 @@ import java.util.UUID;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class OrderExternalQueryService {
 
     private final ProductClient productClient;
     private final DeliveryClient deliveryClient;
     private final ExternalQueryCache externalQueryCache;
     private final OrderPerformanceMetrics performanceMetrics;
+    private final boolean cacheFallbackEnabled;
+
+    public OrderExternalQueryService(
+            ProductClient productClient,
+            DeliveryClient deliveryClient,
+            ExternalQueryCache externalQueryCache,
+            OrderPerformanceMetrics performanceMetrics,
+            @Value("${message.external-query-cache.fallback-enabled:true}") boolean cacheFallbackEnabled
+    ) {
+        this.productClient = productClient;
+        this.deliveryClient = deliveryClient;
+        this.externalQueryCache = externalQueryCache;
+        this.performanceMetrics = performanceMetrics;
+        this.cacheFallbackEnabled = cacheFallbackEnabled;
+    }
 
     @CircuitBreaker(name = "productService", fallbackMethod = "fallbackProduct")
     public ExternalLookupResponse<ProductResponse> getProduct(UUID productId) {
@@ -41,6 +55,11 @@ public class OrderExternalQueryService {
     }
 
     private ExternalLookupResponse<ProductResponse> fallbackProduct(UUID productId, Throwable cause) {
+        if (!cacheFallbackEnabled) {
+            performanceMetrics.recordExternalQuery("product", "failed");
+            throw new ApiException(ErrorResponseCode.ORDER_PRODUCT_LOOKUP_FAILED, cause);
+        }
+
         return externalQueryCache.getProduct(productId)
                 .map(cached -> {
                     performanceMetrics.recordExternalCacheLookup("product", "hit");
@@ -75,6 +94,11 @@ public class OrderExternalQueryService {
             UUID deliveryId,
             Throwable cause
     ) {
+        if (!cacheFallbackEnabled) {
+            performanceMetrics.recordExternalQuery("delivery", "failed");
+            throw new ApiException(ErrorResponseCode.ORDER_DELIVERY_STATUS_LOOKUP_FAILED, cause);
+        }
+
         return externalQueryCache.getDeliveryStatus(deliveryId)
                 .map(cached -> {
                     performanceMetrics.recordExternalCacheLookup("delivery", "hit");

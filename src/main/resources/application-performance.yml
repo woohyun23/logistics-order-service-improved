@@ -73,6 +73,10 @@ management:
 message:
   outbox:
     publish-delay-ms: ${OUTBOX_PUBLISH_DELAY_MS:5000}
+  external-query-cache:
+    fallback-enabled: ${CACHE_FALLBACK_ENABLED:true}
+    product-ttl-seconds: ${PRODUCT_CACHE_TTL_SECONDS:300}
+    delivery-status-ttl-seconds: ${DELIVERY_CACHE_TTL_SECONDS:30}
 
 logging:
   level:
