@@ -1,6 +1,7 @@
 package com.sparta.logistics.application.command.service;
 
 import com.sparta.logistics.domain.entity.OutboxEvent;
+import com.sparta.logistics.domain.model.OutboxStatus;
 import com.sparta.logistics.domain.repository.OutboxEventRepository;
 import com.sparta.logistics.common.metrics.OrderPerformanceMetrics;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +10,7 @@ import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageBuilder;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,10 +28,15 @@ public class OutboxEventPublisher {
     private final RabbitTemplate rabbitTemplate;
     private final OrderPerformanceMetrics performanceMetrics;
 
+    @Value("${message.outbox.skip-locked-enabled:true}")
+    private boolean skipLockedEnabled = true;
+
     // 트랜잭션 안에서 이벤트를 조회하고 발행 상태를 변경하는 애플리케이션 서비스
     @Transactional
     public int publishPendingEvents() {
-        List<OutboxEvent> events = outboxEventRepository.findPendingEventsForPublish();
+        List<OutboxEvent> events = skipLockedEnabled
+                ? outboxEventRepository.findPendingEventsForPublish()
+                : outboxEventRepository.findTop50ByStatusOrderByCreatedAtAsc(OutboxStatus.PENDING);
         performanceMetrics.recordOutboxClaimed(events.size());
 
         if (!events.isEmpty()) {

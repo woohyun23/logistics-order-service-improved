@@ -11,6 +11,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 
@@ -70,6 +71,20 @@ class OutboxEventPublisherTest {
         assertThat(event.getPublishedAt()).isNotNull();
         assertThat(event.getErrorMessage()).isNull();
         assertThat(event.getRetryCount()).isZero();
+    }
+
+    @Test
+    @DisplayName("SKIP LOCKED 비활성화 시 과거의 잠금 없는 조회를 사용한다")
+    void publishPendingEvents_withoutSkipLocked_usesLegacyQuery() {
+        OutboxEvent event = createOutboxEvent();
+        ReflectionTestUtils.setField(outboxEventPublisher, "skipLockedEnabled", false);
+        when(outboxEventRepository.findTop50ByStatusOrderByCreatedAtAsc(OutboxStatus.PENDING))
+                .thenReturn(List.of(event));
+
+        assertThat(outboxEventPublisher.publishPendingEvents()).isEqualTo(1);
+
+        verify(outboxEventRepository).findTop50ByStatusOrderByCreatedAtAsc(OutboxStatus.PENDING);
+        verify(outboxEventRepository, times(0)).findPendingEventsForPublish();
     }
 
     @Test

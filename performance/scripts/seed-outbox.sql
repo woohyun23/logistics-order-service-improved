@@ -10,17 +10,24 @@ INSERT INTO p_outbox_events (
     status,
     retry_count
 )
+WITH seeded_events AS MATERIALIZED (
+    SELECT
+        sequence,
+        gen_random_uuid() AS event_id,
+        gen_random_uuid() AS aggregate_id
+    FROM generate_series(1, :event_count) AS sequence
+)
 SELECT
-    gen_random_uuid(),
+    event_id,
     now() + (sequence * interval '1 millisecond'),
     'ORDER',
-    gen_random_uuid(),
+    aggregate_id,
     'OrderCreatedEvent',
     'baekma.exchange',
     'order.created',
     json_build_object(
         'header', json_build_object(
-            'messageId', gen_random_uuid()::text,
+            'messageId', event_id::text,
             'eventType', 'OrderCreatedEvent',
             'timestamp', now(),
             'version', 'v1'
@@ -29,4 +36,4 @@ SELECT
     )::text,
     'PENDING',
     0
-FROM generate_series(1, 10000) AS sequence;
+FROM seeded_events;

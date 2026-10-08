@@ -61,6 +61,8 @@ message:
       hub-deleted: hub.deleted
   outbox:
     publish-delay-ms: 5000
+    initial-delay-ms: 0
+    skip-locked-enabled: true
   external-query-cache:
     fallback-enabled: true
     product-ttl-seconds: 300
