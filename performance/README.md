@@ -98,6 +98,22 @@ ALLOW_DIRTY=true bash performance/scripts/run-outbox-publisher.sh validate
 
 RabbitMQ 전용 감사 큐의 전체 메시지 수와 고유 `messageId` 수를 비교해 중복과 유실을 계산합니다. 상세한 조건과 결과 해석 방법은 [`results/outbox-publisher/README.md`](results/outbox-publisher/README.md)를 참고합니다.
 
+## Consumer 멱등성 부하테스트
+
+동일한 `messageId`를 순차·동시·혼합 방식으로 재전달하고, 처리 Metric과 `p_processed_events` 및 주문 상태를 함께 비교합니다.
+
+```bash
+bash performance/scripts/run-consumer-idempotency.sh compare
+```
+
+기본 조건은 Consumer 동시성 4~16개이며 5개 시나리오를 각각 3회 실행합니다. 빠른 실행 검증은 다음 명령을 사용합니다.
+
+```bash
+ALLOW_DIRTY=true bash performance/scripts/run-consumer-idempotency.sh validate
+```
+
+실패 시나리오는 존재하지 않는 주문에 대한 처리를 실패시켜 이벤트 선점 이력이 함께 롤백되는지 확인하고, 주문을 생성한 뒤 동일한 이벤트를 재전달해 정상 처리 가능 여부를 검증합니다. 상세한 조건은 [`results/consumer-idempotency/README.md`](results/consumer-idempotency/README.md)를 참고합니다.
+
 ## 테스트 데이터 생성
 
 애플리케이션이 기동해 JPA 테이블이 생성된 뒤 실행합니다.
@@ -139,6 +155,17 @@ MESSAGE_ID_MODE=unique \
 bash gradlew runPerformanceMessageGenerator
 ```
 
+고유 ID를 제한된 개수만 생성해 정상 이벤트와 중복 이벤트를 섞으려면 `cyclic` 모드를 사용합니다.
+
+```bash
+MESSAGE_COUNT=1000 \
+MESSAGE_CONCURRENCY=100 \
+MESSAGE_ID_MODE=cyclic \
+UNIQUE_MESSAGE_COUNT=500 \
+MESSAGE_ID_SEED=consumer-mixed \
+bash gradlew runPerformanceMessageGenerator
+```
+
 동일한 `messageId`를 반복 전송하려면 다음과 같이 실행합니다.
 
 ```bash
@@ -169,6 +196,8 @@ Consumer 멱등성 시나리오에서는 반드시 실제 DB에 존재하는 `OR
 | `MESSAGE_CONCURRENCY` | `1` |
 | `MESSAGE_ID_MODE` | `unique` |
 | `FIXED_MESSAGE_ID` | 실행 시 자동 생성 |
+| `UNIQUE_MESSAGE_COUNT` | `MESSAGE_COUNT`와 동일 |
+| `MESSAGE_ID_SEED` | `consumer-performance` |
 | `MESSAGE_TEMPLATE_FILE` | 기본 메시지 템플릿 |
 | `ORDER_ID` | 실행 시 임의 UUID 생성 |
 | `DELIVERY_ID` | 실행 시 임의 UUID 생성 |
@@ -193,7 +222,8 @@ Prometheus에서 다음 Metric을 조회할 수 있습니다.
 | `order_outbox_claim_batch_size` | 없음 | 한 번에 선점한 Outbox 배치 크기 |
 | `order_outbox_publish_total` | `result` | Outbox 메시지 발행 성공·실패 건수 |
 | `order_consumer_event_total` | `result` | Consumer의 `processed`, `duplicate`, `failed` 건수 |
-| `order_operation_duration_seconds` | `operation`, `result` | Outbox 배치와 Consumer 처리 시간 |
+| `order_consumer_duration_seconds` | `quantile` | Consumer 전체 처리 시간의 p50, p95, p99 |
+| `order_operation_duration_seconds` | `operation`, `result` | Outbox 배치와 외부 조회 처리 시간 |
 
 `eventId`, `orderId`와 같은 고유 식별자는 Metric 태그에 포함하지 않습니다. 개별 이벤트 추적은 로그와 DB 데이터를 사용합니다.
 

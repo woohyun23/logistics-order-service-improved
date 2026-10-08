@@ -35,6 +35,12 @@ public class OrderPerformanceMetrics {
                 .register(meterRegistry));
     }
 
+    public void stopConsumerTimer(Timer.Sample sample) {
+        sample.stop(Timer.builder("order.consumer.duration")
+                .description("Saga Consumer 전체 이벤트 처리 시간")
+                .register(meterRegistry));
+    }
+
     public void recordExternalQuery(String target, String source) {
         counter("order.external.query", "target", target, "source", source).increment();
     }

@@ -58,9 +58,7 @@ public final class RabbitMessageGenerator {
                     start.await();
                     int current;
                     while ((current = sequence.getAndIncrement()) < configuration.messageCount()) {
-                        String messageId = configuration.messageIdMode() == MessageIdMode.FIXED
-                                ? fixedMessageId
-                                : UUID.randomUUID().toString();
+                        String messageId = messageId(configuration, fixedMessageId, current);
                         String payload = render(
                                 template,
                                 messageId,
@@ -71,7 +69,8 @@ public final class RabbitMessageGenerator {
                         );
                         Message message = MessageBuilder
                                 .withBody(payload.getBytes(StandardCharsets.UTF_8))
-                                .setContentType(MessageProperties.CONTENT_TYPE_JSON)
+                                .setContentType(MessageProperties.CONTENT_TYPE_TEXT_PLAIN)
+                                .setContentEncoding(StandardCharsets.UTF_8.name())
                                 .setMessageId(messageId)
                                 .build();
                         try {
@@ -105,18 +104,28 @@ public final class RabbitMessageGenerator {
 
         System.out.printf(
                 Locale.ROOT,
-                "requested=%d sent=%d failed=%d elapsedMs=%d messagesPerSecond=%.2f messageIdMode=%s%n",
+                "requested=%d sent=%d failed=%d elapsedMs=%d messagesPerSecond=%.2f messageIdMode=%s uniqueMessageCount=%d%n",
                 configuration.messageCount(),
                 sent.sum(),
                 failed.sum(),
                 elapsedMillis,
                 messagesPerSecond,
-                configuration.messageIdMode()
+                configuration.messageIdMode(),
+                configuration.uniqueMessageCount()
         );
 
         if (failed.sum() > 0) {
             throw new IllegalStateException("일부 RabbitMQ 메시지 발행에 실패했습니다. failed=" + failed.sum());
         }
+    }
+
+    private static String messageId(Configuration configuration, String fixedMessageId, int sequence) {
+        return switch (configuration.messageIdMode()) {
+            case FIXED -> fixedMessageId;
+            case UNIQUE -> UUID.randomUUID().toString();
+            case CYCLIC -> UUID.nameUUIDFromBytes((configuration.messageIdSeed() + ":"
+                    + sequence % configuration.uniqueMessageCount()).getBytes(StandardCharsets.UTF_8)).toString();
+        };
     }
 
     private static String loadTemplate(String templateFile) throws IOException {
@@ -150,7 +159,8 @@ public final class RabbitMessageGenerator {
 
     private enum MessageIdMode {
         UNIQUE,
-        FIXED
+        FIXED,
+        CYCLIC
     }
 
     private record Configuration(
@@ -164,6 +174,8 @@ public final class RabbitMessageGenerator {
             int concurrency,
             MessageIdMode messageIdMode,
             String fixedMessageId,
+            int uniqueMessageCount,
+            String messageIdSeed,
             String templateFile,
             String orderId,
             String deliveryId
@@ -186,6 +198,8 @@ public final class RabbitMessageGenerator {
                     concurrency,
                     messageIdMode,
                     System.getenv("FIXED_MESSAGE_ID"),
+                    Math.min(positiveInt("UNIQUE_MESSAGE_COUNT", messageCount), messageCount),
+                    environment("MESSAGE_ID_SEED", "consumer-performance"),
                     System.getenv("MESSAGE_TEMPLATE_FILE"),
                     environment("ORDER_ID", UUID.randomUUID().toString()),
                     environment("DELIVERY_ID", UUID.randomUUID().toString())

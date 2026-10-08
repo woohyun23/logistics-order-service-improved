@@ -43,6 +43,7 @@ spring:
       simple:
         concurrency: ${RABBITMQ_CONSUMER_CONCURRENCY:4}
         max-concurrency: ${RABBITMQ_CONSUMER_MAX_CONCURRENCY:16}
+        default-requeue-rejected: ${RABBITMQ_DEFAULT_REQUEUE_REJECTED:false}
 
 eureka:
   client:
@@ -61,6 +62,9 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
+    distribution:
+      percentiles:
+        order.consumer.duration: 0.5,0.95,0.99
   prometheus:
     metrics:
       export:
