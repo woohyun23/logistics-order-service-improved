@@ -162,6 +162,8 @@ run_ttl_checks() {
 }
 
 write_manifest() {
+  local mode_manifest="${RESULT_DIR}/manifest-${MODE}.txt"
+
   {
     echo "measured_commit=$(git -C "${REPOSITORY_ROOT}" rev-parse HEAD)"
     echo "historical_pre_fallback_commit=119d208bede6aef561d5b9a0b99c6284a825e845"
@@ -176,7 +178,7 @@ write_manifest() {
     echo "docker=$(docker version --format '{{.Server.Version}}')"
     echo "compose=$(docker compose version --short)"
     echo "system=$(uname -a)"
-  } > "${RESULT_DIR}/manifest.txt"
+  } | tee "${mode_manifest}" > "${RESULT_DIR}/manifest.txt"
 }
 
 require_clean_commit
